@@ -3,7 +3,7 @@ from flask import Flask
 from flask import request
 from eth_account import Account
 import secrets
-from web3 import Web3
+from web3 import Web3, HTTPProvider
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from flaskext.mysql import MySQL
 import requests
@@ -154,11 +154,11 @@ async def trans_eth():
                         SET transaction_hash = %s,
                             commission = %s,
                             approve_dt = %s,
-                            status = %s,
+                            status = %s
                         WHERE idx = %s"""
     try:
         print("test0")
-        web3 = web3(Web3.HTTPProvider('https://mainnet.infura.io/v3/03140aaea4f94153992f71b4c4214d4b'))
+        web3 = Web3(HTTPProvider('https://mainnet.infura.io/v3/03140aaea4f94153992f71b4c4214d4b'))
         _json = request.json   
         _from_private_key = _json['from_private_key']
         _from_pub_key = _json['from_pub_key']
@@ -186,7 +186,7 @@ async def trans_eth():
                 "gasPrice": web3.eth.generate_gas_price(),
                 "gas": 21000,
                 "to": address_to,
-                "value": web3.toWei(_eth_num, "ether")
+                "value": Web3.to_wei(_eth_num, "ether")
             },
             _from_private_key,
         )
@@ -197,14 +197,9 @@ async def trans_eth():
         gas_price = tx_receipt.effectiveGasPrice
         gas_used = tx_receipt.gasUsed
 
-        transection_fee = web3.fromWei(gas_price*gas_used,"ether")
+        transection_fee = Web3.from_wei(gas_price*gas_used ,"ether")
         print(f"Transaction successful with hash: { tx_receipt.transactionHash.hex() }")
-        """UPDATE tb_point_history
-                        SET transaction_hash = %s,
-                            commission = %s,
-                            approve_dt = %s,
-                            status = %s,
-                        WHERE idx = %s"""
+
         bindData_0 = (tx_hash.hex(),transection_fee,now_dt,"success",_history_key)
         cursor.execute(sqlQuery_0,bindData_0)
         massage = {
