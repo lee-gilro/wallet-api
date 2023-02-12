@@ -1,17 +1,27 @@
-
 from flask import jsonify
 from flask import Flask
 from flask import request
-
-from flask_cors import CORS, cross_origin
-import requests
-import json
 from eth_account import Account
 import secrets
 from web3 import Web3
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
+from flaskext.mysql import MySQL
+import requests
+import json
+import pymysql
+import datetime
+from pytz import timezone
 
 application = Flask(__name__)
+
+mysql = MySQL()
+application.config['MYSQL_DATABASE_USER'] = 'memorics'
+application.config['MYSQL_DATABASE_PASSWORD'] = 'qwer12#$'
+application.config['MYSQL_DATABASE_DB'] = 'wallet'
+application.config['MYSQL_DATABASE_HOST'] = 'wallet-final-rds-prod.ceoqqcpbjmec.ap-northeast-2.rds.amazonaws.com'
+application.config['MYSQL_DATABASE_PORT'] = 3306
+mysql.init_app(application)
+
 
 
 
@@ -70,10 +80,83 @@ async def getWallet_eth():
         #conn.close()  
         return respone
 
+@application.route('/getPrice', methods=['POST'])
+async def getPrice():
+
+    try:
+        _json = request.json   
+        _count = _json['count']
+        _type = _json['type']
+        url_won = "https://quotation-api-cdn.dunamu.com/v1/forex/recent?codes=FRX.KRWUSD"
+        response_2 = requests.get(url_won,params={})
+        won = response_2.json()[0]["basePrice"]
+        if _type == "eth":
+            
+            datas = {}
+            eth_num = _count
+            url_eth = "https://api.lbkex.com//v2/supplement/ticker/price.do?symbol=eth_usdt"
+            response = requests.get(url_eth,params=datas)
+            eth_price = float(response.json()["data"][0]["price"])
+            usdt = round(eth_num * eth_price, 4)
+            krw = round(won*usdt, 4)
+            massage = {
+                'count':eth_num,
+                'krw':format(krw,","),
+                'usdt':format(usdt,","),
+            }
+            respone = jsonify(massage)
+            respone.status_code = 200
+        elif _type == "xml":
+
+            datas = {}
+            xml_num = _count
+            url_xml = "https://api.lbkex.com//v2/supplement/ticker/price.do?symbol=xml_usdt"
+            response = requests.get(url_xml,params=datas)
+            xml_price = float(response.json()["data"][0]["price"])
+            usdt = round(xml_num * xml_price)
+            krw = round(won*usdt, 4)
+            massage = {
+                'count':xml_num,
+                'krw':format(krw,","),
+                'usdt':format(usdt,","),
+            }
+            respone = jsonify(massage)
+            respone.status_code = 200
+        else:
+            massage = {
+                'count':None,
+                'krw':None,
+                'usdt':None,
+            }
+            respone = jsonify(massage)
+            respone.status_code = 400
+        
+    except Exception as e:
+        massage = {
+                'count':None,
+                'krw':None,
+                'usdt':None,
+            }
+        respone = jsonify(massage)
+        respone.status_code = 500
+        #conn.rollback()
+        print(e)
+    finally:
+        
+        #cursor.close() 
+        #conn.close()  
+        return respone
+
 
 @application.route('/trans_eth', methods=['POST'])
 async def trans_eth():
     print("start")
+    sqlQuery_0 = """UPDATE tb_point_history
+                        SET transaction_hash = %s,
+                            commission = %s,
+                            approve_dt = %s,
+                            status = %s,
+                        WHERE idx = %s"""
     try:
         print("test0")
         web3 = Web3(Web3.HTTPProvider('https://mainnet.infura.io/v3/03140aaea4f94153992f71b4c4214d4b'))
@@ -82,9 +165,17 @@ async def trans_eth():
         _from_pub_key = _json['from_pub_key']
         _to_pub_key = _json['to_pub_key']
         _eth_num = _json['eth_num']
+        _history_key = _json['history_key']
         print("test1")
-        
+        conn = mysql.connect()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        now_dt = datetime.datetime.now(timezone("Asia/Seoul"))
+        now_uttm = int(round(datetime.datetime.now(timezone("Asia/Seoul")).timestamp()))	
         address_to = _to_pub_key
+
+        
+
+        ###############선언부################
         print("test2")
         # 4. Set the gas price strategy
         web3.eth.set_gas_price_strategy(rpc_gas_price_strategy)
@@ -104,14 +195,31 @@ async def trans_eth():
         # 6. Send tx and wait for receipt
         tx_hash = web3.eth.send_raw_transaction(tx_create.rawTransaction)
         tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
+        gas_price = tx_receipt.effectiveGasPrice
+        gas_used = tx_receipt.gasUsed
 
+        transection_fee = web3.fromWei(gas_price*gas_used,"ether")
         print(f"Transaction successful with hash: { tx_receipt.transactionHash.hex() }")
-        
+        """UPDATE tb_point_history
+                        SET transaction_hash = %s,
+                            commission = %s,
+                            approve_dt = %s,
+                            status = %s,
+                        WHERE idx = %s"""
+        bindData_0 = (tx_hash.hex(),transection_fee,now_dt,"success",_history_key)
+        cursor.execute(sqlQuery_0,bindData_0)
         massage = {
                 'status' : 200,
                 'result_code' : 230,
-                'tx_hash' : str(tx_hash),
-                'tx_receipt' : str(tx_receipt),
+                'tx_hash' : tx_hash.hex(),
+                'tx_receipt' : {
+                    "blockHash" : str(tx_receipt.blockHash.hex()),
+                    "effectiveGasPrice": str(tx_receipt.effectiveGasPrice),
+                    "transection_fee" : transection_fee,
+                    "from" : str(tx_receipt.get("from")),
+                    "to" : str(tx_receipt.get("to")),
+                   
+                },
                 'msg' : "successfully transfer"
                 }
         respone = jsonify(massage)
@@ -119,6 +227,9 @@ async def trans_eth():
         return respone
 
     except Exception as e:
+        conn.rollback()
+        bindData_0 = (None,None,now_dt,"fail",_history_key)
+        cursor.execute(sqlQuery_0,bindData_0)
         massage = {
                 'status' : 500,
                 'result_code' : 231,
@@ -130,8 +241,11 @@ async def trans_eth():
       
         print(e)
     finally:
-        
+        conn.commit()
+        cursor.close() 
+        conn.close()  
         return respone
+
 
 @application.errorhandler(404)
 def showMessage(error=None):
