@@ -159,8 +159,8 @@ async def getPriceAll():
         if _count_xml and _count_eth:
             
             datas = {}
-            eth_num = _count_eth
-            xml_num = _count_xml
+            eth_num = float(_count_eth)
+            xml_num = float(_count_xml)
             url_eth = "https://api.lbkex.com//v2/supplement/ticker/price.do?symbol=eth_usdt"
             url_xml = "https://api.lbkex.com//v2/supplement/ticker/price.do?symbol=xml_usdt"
             response_eth = requests.get(url_eth,params=datas)
