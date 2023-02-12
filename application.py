@@ -230,7 +230,7 @@ async def trans_eth():
         _from_private_key = _json['from_private_key']
         _from_pub_key = _json['from_pub_key']
         _to_pub_key = _json['to_pub_key']
-        _eth_num = _json['eth_num']
+        _eth_num = float(_json['eth_num'])
         _history_key = _json['history_key']
         print("test1")
         conn = mysql.connect()
