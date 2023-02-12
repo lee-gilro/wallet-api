@@ -146,6 +146,71 @@ async def getPrice():
         #conn.close()  
         return respone
 
+@application.route('/getPriceAll', methods=['POST'])
+async def getPriceAll():
+
+    try:
+        _json = request.json   
+        _count_xml = _json['xml']
+        _count_eth = _json['eth']
+        url_won = "https://quotation-api-cdn.dunamu.com/v1/forex/recent?codes=FRX.KRWUSD"
+        response_2 = requests.get(url_won,params={})
+        won = response_2.json()[0]["basePrice"]
+        if _count_xml and _count_eth:
+            
+            datas = {}
+            eth_num = _count_eth
+            xml_num = _count_xml
+            url_eth = "https://api.lbkex.com//v2/supplement/ticker/price.do?symbol=eth_usdt"
+            url_xml = "https://api.lbkex.com//v2/supplement/ticker/price.do?symbol=xml_usdt"
+            response_eth = requests.get(url_eth,params=datas)
+            response_xml = requests.get(url_xml,data={})
+            eth_price = float(response_eth.json()["data"][0]["price"])
+            xml_price = float(response_xml.json()["data"][0]["price"])
+            eth_usdt = round(eth_num * eth_price, 4)
+            eth_krw = round(won*eth_usdt, 4)
+
+            xml_usdt = round(xml_num * xml_price, 4)
+            xml_krw = round(won*xml_usdt, 4)
+
+            massage = {
+                'eth_count':eth_num,
+                'eth_krw':format(eth_krw,","),
+                'eth_usdt':format(eth_usdt,","),
+                'xml_count':xml_num,
+                'xml_krw':format(xml_krw,","),
+                'xml_usdt':format(xml_usdt,","),
+            }
+            respone = jsonify(massage)
+            respone.status_code = 200
+       
+        else:
+            massage = {
+                'eth_count':eth_num,
+                'eth_krw':None,
+                'eth_usdt':None,
+                'xml_count':xml_num,
+                'xml_krw':None,
+                'xml_usdt':None,
+            }
+            respone = jsonify(massage)
+            respone.status_code = 400
+        
+    except Exception as e:
+        massage = {
+                'count':None,
+                'krw':None,
+                'usdt':None,
+            }
+        respone = jsonify(massage)
+        respone.status_code = 500
+        #conn.rollback()
+        print(e)
+    finally:
+        
+        #cursor.close() 
+        #conn.close()  
+        return respone
 
 @application.route('/trans_eth', methods=['POST'])
 async def trans_eth():
