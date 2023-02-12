@@ -97,7 +97,7 @@ async def getPrice():
             response = requests.get(url_eth,params=datas)
             eth_price = float(response.json()["data"][0]["price"])
             usdt = round(eth_num * eth_price, 4)
-            krw = round(won*usdt, 4)
+            krw = round(won*usdt)
             massage = {
                 'count':eth_num,
                 'krw':format(krw,","),
@@ -113,7 +113,7 @@ async def getPrice():
             response = requests.get(url_xml,params=datas)
             xml_price = float(response.json()["data"][0]["price"])
             usdt = round(xml_num * xml_price)
-            krw = round(won*usdt, 4)
+            krw = round(won*usdt)
             massage = {
                 'count':xml_num,
                 'krw':format(krw,","),
@@ -168,10 +168,10 @@ async def getPriceAll():
             eth_price = float(response_eth.json()["data"][0]["price"])
             xml_price = float(response_xml.json()["data"][0]["price"])
             eth_usdt = round(eth_num * eth_price, 4)
-            eth_krw = round(won*eth_usdt, 4)
+            eth_krw = round(won*eth_usdt)
 
             xml_usdt = round(xml_num * xml_price, 4)
-            xml_krw = round(won*xml_usdt, 4)
+            xml_krw = round(won*xml_usdt)
 
             massage = {
                 'eth_count':eth_num,
