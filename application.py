@@ -7,7 +7,6 @@ from web3 import Web3
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from flaskext.mysql import MySQL
 import requests
-import json
 import pymysql
 import datetime
 from pytz import timezone
