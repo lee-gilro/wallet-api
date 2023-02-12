@@ -180,6 +180,8 @@ async def getPriceAll():
                 'xml_count':xml_num,
                 'xml_krw':format(xml_krw,","),
                 'xml_usdt':format(xml_usdt,","),
+                'total_krw':format(eth_krw+xml_krw,","),
+                'total_usdt':format(eth_usdt+xml_usdt,","),
             }
             respone = jsonify(massage)
             respone.status_code = 200
