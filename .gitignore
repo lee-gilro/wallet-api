@@ -9,7 +9,7 @@ test2.py
 .venv/
 # C extensions
 *.so
-requirements.txt
+
 .venv/
 # Distribution / packaging
 .Python
