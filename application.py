@@ -158,7 +158,7 @@ async def trans_eth():
                         WHERE idx = %s"""
     try:
         print("test0")
-        web3 = Web3(Web3.HTTPProvider('https://mainnet.infura.io/v3/03140aaea4f94153992f71b4c4214d4b'))
+        web3 = web3(Web3.HTTPProvider('https://mainnet.infura.io/v3/03140aaea4f94153992f71b4c4214d4b'))
         _json = request.json   
         _from_private_key = _json['from_private_key']
         _from_pub_key = _json['from_pub_key']
@@ -223,9 +223,10 @@ async def trans_eth():
                 }
         respone = jsonify(massage)
         respone.status_code = 200
-        return respone
+       
 
     except Exception as e:
+        print("exception")
         conn.rollback()
         bindData_0 = (None,None,now_dt,"fail",_history_key)
         cursor.execute(sqlQuery_0,bindData_0)
